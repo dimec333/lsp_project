@@ -1,0 +1,42 @@
+#include "aduc812.h"
+#include "max.h"
+#include "print.h"
+
+char x='x';
+void SIO_ISR(void) __interrupt (4)
+{
+	if (RI)
+	{
+		RI=0;
+		x=SBUF;
+		TI=1;
+	}
+	if (TI)
+	{
+		TI=0;
+		SBUF=x;
+		while(!TI);
+		TI=0;
+		PrintChar(x);
+	}
+}
+void SetVector(unsigned char xdata * Address, void * Vector)
+{
+	unsigned char xdata * TmpVector;
+	*Address=0x02;
+	TmpVector = (unsigned char xdata *) (Address + 1);
+	*TmpVector = (unsigned char) ((unsigned short)Vector >> 8);
+	++TmpVector;
+	*TmpVector = (unsigned char) Vector;
+}
+void main(void)
+{
+Clear();
+TMOD = 0x20; // Таймер 1 в режиме autoreload
+TCON=0x40; // Запуск таймера 1
+SCON=0x50;
+TH1 = 0xFD;
+	SetVector(0x2023, (void*) SIO_ISR);
+	EA=1;
+	ES=1;
+}
